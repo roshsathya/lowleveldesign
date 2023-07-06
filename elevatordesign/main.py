@@ -1,32 +1,55 @@
-RESIDENTIAL = 'RESIDENTIAL'
-COMMERCIAL = 'COMMERCIAL'
-FREIGHT = 'FREIGHT'
+class ElevatorTypes:
+    RESIDENTIAL = 'RESIDENTIAL'
+    COMMERCIAL = 'COMMERCIAL'
+    FREIGHT = 'FREIGHT'
+
+
+class ElevatorStatus:
+    UP = 'UP'
+    DOWN = 'DOWN'
+    HALT = 'HALT'
+
+
+class LevelButton:
+    UP = 'UP'
+    DOWN = 'DOWN'
 
 
 class Elevator:
     def __init__(self, levels, max_capacity) -> None:
         self.levels = levels
         self.current_level = 0
+        self.status = ElevatorStatus.HALT
         self.max_capacity = max_capacity
-        self.light_bulb_on = False
-        self.security_alarm = False
-        self.fan_on = False
+        self.levels_to_halt = []
+        self.is_light_bulb_on = False
+        self.is_security_alarm_on = False
+        self.is_fan_on = False
+        self.is_door_status = False
 
     def fan_switch(self):
-        return not self.fan_on
+        return not self.is_fan_on
 
     def light_bulb_switch(self):
-        return not self.light_bulb_on
+        return not self.is_light_bulb_on
 
     def security_alarm_switch(self):
-        return not self.security_alarm
+        return not self.is_security_alarm
 
-    def press_level(self, level):
+    def door_switch(self):
+        not self.is_door_status
+        if not self.levels_to_halt:
+            self.status = ElevatorStatus.HALT
+
+    def press_level(self, level, direction):
         if level > self.levels or level < 0:
             raise ValueError(f"Level provided is incorrect")
         if level == self.current_level:
             return
         self.current_level = level
+
+    def select_level(self, level):
+        self.levels_to_halt.append(level)
 
     @classmethod
     def get_best_elevator(cls, *args):
@@ -38,8 +61,25 @@ class ResidentialElevator(Elevator):
         super().__init__(levels, max_capacity)
 
     @classmethod
-    def get_best_elevator(cls, level):
-        pass
+    def get_best_elevator(cls, all_elevators, level, direction):
+        closest_elevator = None
+        closest_elevator_distance = float("inf")
+
+        for elevator in all_elevators:
+            possible_elevator = None
+
+            if elevator.status == ElevatorStatus.HALT:
+                possible_elevator = elevator
+            elif (elevator.status == ElevatorStatus.DOWN and elevator.current_level > level and direction == LevelButton.DOWN) \
+                    or (elevator.status == ElevatorStatus.UP and elevator.current_level < level and direction == LevelButton.UP):
+                possible_elevator = elevator
+
+            if possible_elevator and abs(possible_elevator.current_level - level) < closest_elevator_distance:
+                closest_elevator = possible_elevator
+                closest_elevator_distance = abs(
+                    possible_elevator.current_level - level)
+
+        return closest_elevator
 
 
 class CommercialElevator(Elevator):
@@ -67,9 +107,9 @@ class ElevatorFactory:
     @staticmethod
     def get_elevator_class():
         return {
-            RESIDENTIAL: ResidentialElevator,
-            COMMERCIAL: CommercialElevator,
-            FREIGHT: FreightElevator
+            ElevatorTypes.RESIDENTIAL: ResidentialElevator,
+            ElevatorTypes.COMMERCIAL: CommercialElevator,
+            ElevatorTypes.FREIGHT: FreightElevator
         }
 
     @classmethod
@@ -85,9 +125,10 @@ class ElevatorFactory:
 
 
 class ElevatorSystem:
-    def __init__(self, levels, elevator_type) -> None:
+    def __init__(self, total_elevators, levels, elevator_type) -> None:
         self.ElevatorClass = self.get_elevator_class(elevator_type)
-        self.elevators = ElevatorFactory.get_n_elevators(levels, elevator_type)
+        self.elevators = ElevatorFactory.get_n_elevators(
+            total_elevators, levels, elevator_type)
 
     def get_elevator_class(self, elevator_type):
         ElevatorClass = None
@@ -97,5 +138,12 @@ class ElevatorSystem:
             raise Exception("Error in given elevator type")
         return ElevatorClass
 
-    def get_closest_elevator(self, level):
-        return self.ElevatorClass.get_best_elevator(level)
+    def press_level_button(self, level, direction):
+        elevator = self.ElevatorClass.get_best_elevator(
+            self.elevators, level, direction)
+        if elevator.status == ElevatorStatus.HALT:
+            if elevator.current_level > level:
+                elevator.status = ElevatorStatus.DOWN
+            elif elevator.current_level < level:
+                elevator.status = ElevatorStatus.UP
+        elevator.current_level = level
