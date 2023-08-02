@@ -1,3 +1,6 @@
+import signal
+
+
 class ElevatorTypes:
     RESIDENTIAL = 'RESIDENTIAL'
     COMMERCIAL = 'COMMERCIAL'
@@ -15,17 +18,45 @@ class LevelButton:
     DOWN = 'DOWN'
 
 
+# This class has the capability of counting the total number of people
+# within the elevator and also signaling if the sensor is on/off
+# (which means an individual is keeping the elevator at halt)
+
+class ElevatorDoorSensor:
+    def __init__(self) -> None:
+        self.sensor = False
+        self.current_capacity = 0
+        self.setup_signal()
+
+    def setup_signal(self):
+        signal.signal(signal.SIGUSR1, self.capacity_signal_handler)
+        signal.siginterrupt(signal.SIGUSR1, False)
+
+    def toggle_sensor(self, current_capacity):
+        self.current_capacity = current_capacity
+        return not self.sensor
+
+    def get_sensor_status(self):
+        return self.sensor
+
+    def get_capacity(self):
+        return self.current_capacity
+
+    def capacity_signal_handler(self, signal):
+        self.current_capacity = signal
+
+
 class Elevator:
     def __init__(self, levels, max_capacity) -> None:
-        self.levels = levels
+        self.levels = [not bool(level) for level in range(levels)]
         self.current_level = 0
         self.status = ElevatorStatus.HALT
         self.max_capacity = max_capacity
-        self.levels_to_halt = []
         self.is_light_bulb_on = False
         self.is_security_alarm_on = False
         self.is_fan_on = False
         self.is_door_status = False
+        self.sensor = ElevatorDoorSensor()
 
     def fan_switch(self):
         return not self.is_fan_on
@@ -37,19 +68,31 @@ class Elevator:
         return not self.is_security_alarm
 
     def door_switch(self):
-        not self.is_door_status
-        if not self.levels_to_halt:
-            self.status = ElevatorStatus.HALT
+        if not self.is_door_status:
+            return True
+        current_weight = self.sensor.get_capacity()
+        if current_weight >= self.max_capacity:
+            return True
+        return False
 
     def press_level(self, level, direction):
-        if level > self.levels or level < 0:
+        if level > len(self.levels) or level < 0:
             raise ValueError(f"Level provided is incorrect")
         if level == self.current_level:
             return
-        self.current_level = level
+        self.levels[level] = True
+        self.move(direction)
 
-    def select_level(self, level):
-        self.levels_to_halt.append(level)
+    def move(self, direction):
+        condition = self.current_level < len(
+            self.levels) if direction == LevelButton.UP else self.current_level >= 0
+        while condition:
+            if self.levels[self.current_level]:
+                break
+            if direction == LevelButton.UP:
+                self.current_level += 1
+            else:
+                self.current_level -= 1
 
     @classmethod
     def get_best_elevator(cls, *args):
@@ -101,20 +144,22 @@ class FreightElevator(Elevator):
 
 
 class ElevatorFactory:
+    elevator_types = {
+        ElevatorTypes.RESIDENTIAL: ResidentialElevator,
+        ElevatorTypes.COMMERCIAL: CommercialElevator,
+        ElevatorTypes.FREIGHT: FreightElevator
+    }
+
     def __init__(self) -> None:
         pass
 
-    @staticmethod
-    def get_elevator_class():
-        return {
-            ElevatorTypes.RESIDENTIAL: ResidentialElevator,
-            ElevatorTypes.COMMERCIAL: CommercialElevator,
-            ElevatorTypes.FREIGHT: FreightElevator
-        }
+    @classmethod
+    def get_elevator_class(cls, elevator):
+        return cls.elevator_types.get(elevator)
 
     @classmethod
     def get_elevator(cls, levels, elevator_type):
-        ElevatorClass = cls.get_elevator_class().get(elevator_type)
+        ElevatorClass = cls.get_elevator_class(elevator_type)
         if not ElevatorClass:
             raise ValueError("Incorrect elevator type")
         return ElevatorClass(levels)
@@ -125,25 +170,28 @@ class ElevatorFactory:
 
 
 class ElevatorSystem:
-    def __init__(self, total_elevators, levels, elevator_type) -> None:
-        self.ElevatorClass = self.get_elevator_class(elevator_type)
-        self.elevators = ElevatorFactory.get_n_elevators(
-            total_elevators, levels, elevator_type)
+    def __init__(self, levels: int, elevator_types: dict) -> None:
+        self.elevators_dict = self.set_elevator_dict(levels, elevator_types)
 
-    def get_elevator_class(self, elevator_type):
-        ElevatorClass = None
-        try:
-            ElevatorClass = ElevatorFactory.get_elevator_class(elevator_type)
-        except:
-            raise Exception("Error in given elevator type")
-        return ElevatorClass
+    def set_elevator_dict(self, levels, elevator_types):
+        elevators_dict = {}
+        for elevator_type, count in elevator_types.items():
+            elevators_dict[elevator_type] = [ElevatorFactory.get_elevator(
+                levels, elevator_type) for _ in range(count)]
+        return elevators_dict
 
-    def press_level_button(self, level, direction):
-        elevator = self.ElevatorClass.get_best_elevator(
-            self.elevators, level, direction)
-        if elevator.status == ElevatorStatus.HALT:
-            if elevator.current_level > level:
-                elevator.status = ElevatorStatus.DOWN
-            elif elevator.current_level < level:
-                elevator.status = ElevatorStatus.UP
-        elevator.current_level = level
+    def press_level_button(self, level, direction, elevator_type):
+        ElevatorClass = ElevatorFactory.elevator_types(elevator_type)
+        elevator = ElevatorClass.get_best_elevator(
+            self.elevators_dict[elevator_type], level, direction)
+        elevator.levels[level] = True
+        elevator_direction = LevelButton.UP if level > elevator.current_level else LevelButton.DOWN
+        elevator.move(elevator_direction)
+
+
+# Problems to address
+# - Having different kind of elevators - dict
+# - Keeping state of different elevators
+# - Adding buttons within elevator
+# - Person class
+# - Checking capacity of the elevator
