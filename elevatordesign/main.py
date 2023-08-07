@@ -84,10 +84,17 @@ class Elevator:
         self.move(direction)
 
     def move(self, direction):
-        condition = self.current_level < len(
-            self.levels) if direction == LevelButton.UP else self.current_level >= 0
+        if direction == LevelButton.UP:
+            condition = self.current_level < len(
+                self.levels)
+            self.status = ElevatorStatus.UP
+        else:
+            condition = self.current_level >= 0
+            self.status = ElevatorStatus.DOWN
+
         while condition:
             if self.levels[self.current_level]:
+                self.status = ElevatorStatus.HALT
                 break
             if direction == LevelButton.UP:
                 self.current_level += 1
