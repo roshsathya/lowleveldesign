@@ -1,24 +1,4 @@
 
-
-class CoffeeTemp:
-    def __init__(self) -> None:
-        self.cost = None
-
-
-class HotCoffee(CoffeeTemp):
-    def __init__(self, cost) -> None:
-        super().__init__()
-        self.key = 1
-        self.cost = cost
-
-
-class ColdCoffee(CoffeeTemp):
-    def __init__(self, cost) -> None:
-        super().__init__()
-        self.key = 2
-        self.cost = cost
-
-
 class CoffeeType:
 
     def __init__(self) -> None:
@@ -35,7 +15,6 @@ class Cappuccino(CoffeeType):
         super().__init__()
         self.name = "CAPPUCCINO"
         self.base_price = 10
-        self.coffee_temp['HOT'] = HotCoffee(self.base_price + 5)
 
     def process_coffee(self):
         pass
@@ -47,8 +26,6 @@ class Americano(CoffeeType):
         super().__init__()
         self.name = "AMERICANO"
         self.base_price = 5
-        self.coffee_temp['HOT'] = HotCoffee(self.base_price + 5)
-        self.coffee_temp['COLD'] = ColdCoffee(self.base_price + 2)
 
     def process_coffee(self):
         pass
@@ -60,7 +37,6 @@ class FlatWhite(CoffeeType):
         super().__init__()
         self.name = "Flat White"
         self.base_price = 5
-        self.coffee_temp['HOT'] = HotCoffee(self.base_price + 5)
 
     def process_coffee(self):
         pass
@@ -72,7 +48,6 @@ class Espresso(CoffeeType):
         super().__init__()
         self.name = "Espresso"
         self.base_price = 5
-        self.coffee_temp['HOT'] = HotCoffee(self.base_price + 5)
 
     def process_coffee(self):
         pass

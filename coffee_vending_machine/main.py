@@ -24,50 +24,30 @@ from .coffee_builder import CoffeeBuilder
 
 class UserInterface:
     def __init__(self) -> None:
-        self.current_step = 0
-        self.coffee_type_no = None
-        self.coffee_temp_no = None
-        self.beans_no = None
-        self.coffee_builder = CoffeeBuilder()
+        self.initial_setup()
 
-    def get_coffee_type(self):
-        return [(idx, coffee_obj.name) for idx, coffee_obj in enumerate(self.coffee_builder.coffee_types)]
-
-    def set_coffee_type(self, coffee_type_no):
-        self.coffee_type_no = coffee_type_no
-        self.current_step += 1
-
-    def get_coffee_temp(self):
-        coffee_type_obj = self.coffee_builder.coffee_types[self.coffee_type_no]
-        output = []
-        for coffee_temp, coffee_temp_info in coffee_type_obj.coffee_temp.items():
-            if coffee_temp_info['can_be_served']:
-                output.append((coffee_temp_info['key'], coffee_temp))
-        return output
-
-    def set_coffee_temperature(self, coffee_temp_no):
-        self.coffee_temp_no = coffee_temp_no
-        self.current_step += 1
-
-    def get_coffee_beans(self):
-        output = []
-        for idx, bean_obj in self.coffee_builder.beans.items():
-            if bean_obj.current_quantity > 0:
-                output.append((idx, bean_obj.name))
-        return output
-
-    def set_coffee_beans(self, beans_no):
-        self.beans_no = beans_no
-        self.current_step += 1
+    def initial_setup(self):
+        beans_dict = {}
+        # {
+        #    1: BeanFactory.get_coffee_object(1),
+        #    2: BeanFactory.get_coffee_object(2),
+        # }
+        CoffeeBuilder.setup_beans(beans_dict)
+        coffee_type_dict = {}
+        # {
+        #    1: CoffeeProcessingFactory.get_coffee_object(1),
+        #    2: CoffeeProcessingFactory.get_coffee_object(2),
+        # }
+        CoffeeBuilder.setup_coffee_types(coffee_type_dict)
+        coffee_temp_dict = {}
+        # {
+        #    1: CoffeeTempFactory.get_coffee_object(1),
+        #    2: CoffeeTempFactory.get_coffee_object(2),
+        # }
+        CoffeeBuilder.setup_coffee_types(coffee_temp_dict)
 
     def start_process(self):
-        self.build_coffee()
-
-    def build_coffee(self):
-        if self.current_step != 3:
-            return
-        return self.coffee_builder.build_coffee(
-            self.coffee_type_no, self.coffee_temp_no, self.beans_no)
+        coffee_builder = CoffeeBuilder()
 
     def process_payment(self):
         pass
